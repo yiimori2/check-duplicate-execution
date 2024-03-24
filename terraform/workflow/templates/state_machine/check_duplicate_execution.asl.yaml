@@ -1,0 +1,26 @@
+StartAt: Count running executions
+States:
+    Count running executions:
+        Next: Choice
+        Type: Task
+        Resource: "arn:aws:states:::aws-sdk:sfn:listExecutions"
+        ResultSelector:
+            count.$: "States.ArrayLength($.Executions)"
+        ResultPath: $.result
+        Parameters:
+            StateMachineArn: "arn:aws:states:ap-northeast-1:${aws_account_id}:stateMachine:check-duplicate-executions"
+            StatusFilter: "RUNNING"
+    Choice:
+        Type: Choice
+        Choices:
+            - Variable: $.result.count
+              NumericGreaterThanEquals: 2
+              Next: Fail State
+        Default: Wait
+    Fail State:
+        Type: Fail
+        Cause: "state machines duplicate execution"
+    Wait:
+        End: true
+        Type: Wait
+        Seconds: 300
